@@ -37,6 +37,28 @@ Contains the freeRTOS task and all necessary support
 extern "C" {
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_event_loop.h"
+#include "esp_wifi.h"
+#include "esp_wifi_types.h"
+#include "esp_log.h"
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "mdns.h"
+#include "lwip/api.h"
+#include "lwip/err.h"
+#include "lwip/netdb.h"
+
+#include "json.h"
+#include "http_server.h"
+#include "dns_server.h"
 
 
 /**
@@ -172,6 +194,17 @@ struct wifi_settings_t{
 };
 extern struct wifi_settings_t wifi_settings;
 
+typedef void (*wifi_manager_callback)(void *);
+
+/**
+ * Set function to call when wifi connected established
+ */
+void wifi_manager_set_wifi_connected_callback(wifi_manager_callback callback, void * param);
+
+/**
+ * Set function to call when wifi disconnected
+ */
+void wifi_manager_set_wifi_disconnected_callback(wifi_manager_callback callback, void * param);
 
 /**
  * Frees up all memory allocated by the wifi_manager and kill the task.

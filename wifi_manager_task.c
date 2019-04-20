@@ -48,7 +48,6 @@ SOFTWARE.
 #include "lwip/netdb.h"
 
 #include "http_server.h"
-#include "wifi_manager.h"
 
 #include "wifi_manager_task.h"
 
@@ -60,15 +59,19 @@ static TaskHandle_t task_wifi_manager = NULL;
 static const char TAG[] = "wifi_manager";
 
 
-void wifi_manager_start_task()
+void wifi_manager_start_task(wifi_manager_callback connect_callback, 
+							void * connect_param,
+							wifi_manager_callback disconnect_callback,
+						    void * disconnect_param)
 {
-
-
 	/* disable the default wifi logging */
 	esp_log_level_set("wifi", ESP_LOG_NONE);
 
 	/* initialize flash memory */
 	nvs_flash_init();
+
+	wifi_manager_set_wifi_connected_callback(connect_callback, connect_param);
+	wifi_manager_set_wifi_disconnected_callback(disconnect_callback, disconnect_param);
 
 	/* start the HTTP Server task */
 	xTaskCreate(&http_server, "http_server", 2048, NULL, 5, &task_http_server);

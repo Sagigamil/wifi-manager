@@ -29,29 +29,7 @@ Contains the freeRTOS task and all necessary support
 @see https://github.com/tonyp7/esp32-wifi-manager
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include "esp_system.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_event_loop.h"
-#include "esp_wifi.h"
-#include "esp_wifi_types.h"
-#include "esp_log.h"
-#include "nvs.h"
-#include "nvs_flash.h"
-#include "mdns.h"
-#include "lwip/api.h"
-#include "lwip/err.h"
-#include "lwip/netdb.h"
-
-#include "json.h"
-#include "http_server.h"
 #include "wifi_manager.h"
-#include "dns_server.h"
 
 
 
@@ -61,6 +39,12 @@ wifi_ap_record_t *accessp_records;
 char *accessp_json = NULL;
 char *ip_info_json = NULL;
 wifi_config_t* wifi_manager_config_sta = NULL;
+
+wifi_manager_callback on_connect_callback = NULL;
+void * on_connect_callback_param;
+
+wifi_manager_callback on_disconnect_callback = NULL;
+void * on_disconnect_callback_param = NULL;
 
 /* @brief tag used for ESP serial console messages */
 static const char TAG[] = "wifi_manager";
@@ -103,6 +87,18 @@ const int WIFI_MANAGER_REQUEST_WIFI_SCAN = BIT5;
 
 /* @brief When set, means a client requested to disconnect from currently connected AP. */
 const int WIFI_MANAGER_REQUEST_WIFI_DISCONNECT = BIT6;
+
+void wifi_manager_set_wifi_connected_callback(wifi_manager_callback callback, void * param)
+{
+	on_connect_callback = callback;
+	on_connect_callback_param = param;
+}
+
+void wifi_manager_set_wifi_disconnected_callback(wifi_manager_callback callback, void * param)
+{
+	on_disconnect_callback = callback;
+	on_disconnect_callback_param = param;
+}
 
 
 void wifi_manager_scan_async(){
@@ -611,6 +607,11 @@ void wifi_manager( void * pvParameters ){
 
 				/* wait until wifi disconnects. From experiments, it seems to take about 150ms to disconnect */
 				xEventGroupWaitBits(wifi_manager_event_group, WIFI_MANAGER_STA_DISCONNECT_BIT, pdFALSE, pdTRUE, portMAX_DELAY );
+				
+				if (NULL != on_disconnect_callback)
+				{
+					on_disconnect_callback(on_disconnect_callback_param);
+				}				
 			}
 			xEventGroupClearBits(wifi_manager_event_group, WIFI_MANAGER_STA_DISCONNECT_BIT);
 
@@ -679,6 +680,11 @@ void wifi_manager( void * pvParameters ){
 
 						/* save wifi config in NVS */
 						wifi_manager_save_sta_config();
+
+						if (NULL != on_connect_callback)
+						{
+							on_connect_callback(on_disconnect_callback_param);
+						}
 					}
 					else{
 
